@@ -1,0 +1,9 @@
+# Local development dependencies go here
+-r base.txt
+
+debugpy
+django-debug-toolbar
+django-extensions
+ipdb
+pydevd-pycharm==243.26053.29
+Werkzeug
