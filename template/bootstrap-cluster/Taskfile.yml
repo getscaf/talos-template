@@ -9,17 +9,10 @@ includes:
       ENV: {{ "'{{.ENV}}'" }}
       ARGOCD_VERSION: {{ "'{{.ARGOCD_VERSION}}'" }}
 
-{%- if copier__operating_system == "talos" %}
   talos:
     taskfile: ./talos.yaml
     vars:
       ENV: {{ "'{{.ENV}}'" }}
-{%- elif copier__operating_system == "k3s" %}
-  k3s:
-    taskfile: ./k3s.yaml
-    vars:
-      ENV: {{ "'{{.ENV}}'" }}
-{%- endif %}
 
 tasks:
   default:

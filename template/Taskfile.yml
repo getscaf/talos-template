@@ -1,7 +1,7 @@
 {% raw %}
 version: '3'
 
-dotenv: ['.env', '{{.ENV}}/.env', 'bootstrap-cluster/.env']
+dotenv: ['.env', '{{.ENV}}/.env', 'bootstrap-cluster/.env', 'bootstrap-cluster/{{.ENV}}/.env']
 
 includes:
   terraform:
@@ -225,7 +225,7 @@ tasks:
     cmds:
       - task: validate-environment
         vars: {ACTION: 'Tearing down', ENV: '{{.ENV}}'}
-      - task: bootstrap-cluster:k3s:delete-all-secrets
+      - task: bootstrap-cluster:talos:delete_all_secrets
         vars: {ENV: '{{.ENV}}'}
       - task: terraform:destroy-environment-dir
         vars: {ENV: '{{.ENV}}'}

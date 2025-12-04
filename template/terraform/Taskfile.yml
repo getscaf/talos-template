@@ -95,22 +95,6 @@ tasks:
         vars:
           RESOURCE_NAME: "{{.ENV}}"
           DIR: "{{.ENV}}"
-      - task: update-cloudfront-distribution-id
-        vars: { ENV: '{{.ENV}}' }
-
-  update-cloudfront-distribution-id:
-    desc: Update CloudFront Distribution ID in kustomization.yaml files
-    internal: true
-    silent: true
-    vars:
-      ENV: "{{.ENV}}"
-      DISTRIBUTION_ID:
-        sh: tofu -chdir={{.ENV}} output -raw cloudfront_distribution_id
-    cmds:
-      - |
-        echo -e "{{.BLUE}}Updating CloudFront Distribution ID in k8s/{{.ENV}}/kustomization.yaml...{{.END}}"
-        sed -i '/path: \/data\/DISTRIBUTION_ID/{N;s|value: ".*"|value: "{{.DISTRIBUTION_ID}}"|;}' ../k8s/{{.ENV}}/kustomization.yaml
-        echo -e "{{.GREEN}}Updated DISTRIBUTION_ID to {{.DISTRIBUTION_ID}}{{.END}}"
 
   # Destruction tasks
   destroy-environment-dir:

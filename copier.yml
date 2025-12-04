@@ -132,38 +132,12 @@ copier__aws_account_id:
       "AWS account ID cannot be empty."
     {% endif %}
 
-copier__create_nextjs_frontend:
-  type: bool
-  default: true
-  help: "Do you want to create a Next.js frontend? (y/n) [default: Yes]"
-
-copier__mail_service:
-  type: str
-  default: "Amazon SES"
-  choices:
-    - "Mailgun"
-    - "Amazon SES"
-    - "Other SMTP"
-  help: "Which mail service do you want to use?"
-  when: false
-
 copier__operating_system:
   type: str
-  default: "k3s"
+  default: "talos"
   choices:
-    k3s: "k3s"
     talos: "talos"
-  help: "Deploy Kubernetes on k3s running on Ubuntu or on Talos Linux?"
-
-copier__use_celery:
-  type: bool
-  default: false
-  help: "Do you want to use Celery for task management? (y/n) [default: No]"
-
-copier__use_sentry:
-  type: bool
-  default: false
-  help: "Do you want to integrate Sentry for error tracking? (y/n) [default: No]"
+  help: "Deploy Kubernetes on Talos Linux?"
 
 copier__repo_url:
   type: str
