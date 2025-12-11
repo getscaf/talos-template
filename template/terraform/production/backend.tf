@@ -8,3 +8,7 @@ terraform {
     dynamodb_table = "{{ copier__project_dash }}-terraform-state"
   }
 }
+
+module "global_variables" {
+  source = "../modules/global_variables"
+}

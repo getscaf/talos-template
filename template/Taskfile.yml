@@ -12,7 +12,6 @@ includes:
     dir: ./bootstrap-cluster
     vars:
       ENV: '{{.ENV}}'
-      ARGOCD_VERSION: '{{.ARGOCD_VERSION}}'
 vars:
 {% endraw %}
   PROJECT_SLUG: "{{ copier__project_dash }}"
@@ -20,7 +19,6 @@ vars:
   AWS_ACCOUNT_ID: "{{ copier__aws_account_id }}"
 {% raw %}
   TERRAFORM_STATE_BUCKET: "{{.PROJECT_SLUG}}-terraform-state"
-  ARGOCD_VERSION: "{{.ARGOCD_VERSION}}"
   TERRAFORM_AUTO_APPROVE: "{{.TERRAFORM_AUTO_APPROVE}}"
   BLUE:
     sh: echo "\033[0;36m"
@@ -127,14 +125,8 @@ tasks:
         vars: {ENV: '{{.ENV}}'}
       - task: commit-changes
 {% endraw %}
-      {%- if copier__operating_system == "talos" %}
       - task: bootstrap-cluster:talos:bootstrap # todo: add talos alternative
-      {%- elif copier__operating_system == "k3s" %}
-      - task: bootstrap-cluster:k3s:bootstrap # todo: add talos alternative
-      {%- endif %}
 {% raw %}
-        vars: {ENV: '{{.ENV}}'}
-      - task: bootstrap-cluster:argocd:bootstrap
         vars: {ENV: '{{.ENV}}'}
 
   delete-ecr-images:
