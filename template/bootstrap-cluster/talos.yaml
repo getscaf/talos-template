@@ -45,7 +45,7 @@ tasks:
     requires:
       vars: [ENV]
     cmds:
-      - talosctl config endpoint {{ '{{.EC2_HOSTS}}' }}
+      - talosctl --talosconfig $TALOSCONFIG config endpoint {{ '{{.EC2_HOSTS}}' }}
   apply_talos_config:
     desc: |
       Apply the Talos configuration to all nodes in the control plane.
@@ -56,6 +56,7 @@ tasks:
           talosctl apply-config \
             --insecure \
             --nodes $node \
+            --talosconfig $TALOSCONFIG \
             --file ./{{ '{{.ENV}}' }}/controlplane.yaml; \
         done
   bootstrap_kubernetes:
@@ -68,7 +69,7 @@ tasks:
             output -raw control_plane_nodes_private_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl bootstrap --nodes {{ '{{.FIRST_NODE}}' }}
+      - talosctl bootstrap --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }}
   generate_kubeconfig:
     desc: |
       Generate the kubeconfig file to access the Kubernetes cluster using
@@ -80,7 +81,7 @@ tasks:
             output -raw control_plane_nodes_private_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl kubeconfig $KUBECONFIG --nodes {{ '{{.FIRST_NODE}}' }} --force
+      - talosctl kubeconfig $KUBECONFIG --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }} --force
   upgrade_talos:
     desc: |
       Upgrade Talos on all control plane nodes to a specified version.
@@ -88,7 +89,8 @@ tasks:
       #- task: health
       - |
         for node in $(echo "{{ '{{.CONTROL_PLANE_PRIVATE_IPS}}' }}"); do
-          talosctl upgrade --nodes $node --image {{ '{{.TALOS_FACTORY_IMAGE}}' }}; \
+          echo "Upgrading Talos on $node" && \
+          talosctl upgrade --talosconfig $TALOSCONFIG --nodes $node --image {{ '{{.TALOS_FACTORY_IMAGE}}' }}; \
         done
   store_talosconfig:
     desc: |
@@ -131,14 +133,14 @@ tasks:
             output -raw control_plane_nodes_private_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl health --nodes {{ '{{.FIRST_NODE}}' }}
+      - talosctl health --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }}
   services:
     desc: |
       Check service status on all notes.
     cmds:
       - |
         for node in $(yq -r '.contexts[].endpoints[]' $TALOSCONFIG); do
-          talosctl service --nodes $node;
+          talosctl service --talosconfig $TALOSCONFIG --nodes $node;
         done
   delete_all_secrets:
     desc: |

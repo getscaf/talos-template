@@ -29,7 +29,16 @@ task: Failed to run task "teardown-sandbox": task: Failed to run task "teardown-
 ```
 1. subsequent runs of  `task deploy-sandbox` can fail on `commit-changes` if there are no files that have changed
 1. must run `export ENV=sandbox` prior to `task deploy-sandbox` so `bootstrap-cluster/sandbox/.env` values are correctly sourced, otherwise talos config tails because `.env` values are not present so argument mismatch (expects 2, 0 provided) errors appear
-
+1. EC2 public IP's change on reboots, any talos config concerns with this?
+1. Had to add code to terraform/{staging|prod}/backend.tf to get global_variables registered
+```text
+module "global_variables" {
+  source = "../modules/global_variables"
+}
+```
+1. had to rename `terraform/prod` to `terraform/production`
+1. had to pair down `terraform/{env}/outputs.tf`
+1. when deploying a second environment, ECR registry creation fails because it exists
 
 
 # commands
