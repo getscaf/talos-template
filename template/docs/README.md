@@ -1,17 +1,33 @@
-# Project Documentation
+# Talos Kubernetes Cluster Documentation
 
-You are encouraged to add in this directory all documentation
-useful for others (and you in future) to understand better
-how the project work and to help developers to prepare their environment.
+This directory contains documentation for deploying and managing a Talos Linux Kubernetes cluster on AWS.
 
-Examples (not all possibilities) of good things that can be documented:
+## Overview
 
-- How to configure development environment using third-party
-applications and integrations (e.g. Slack, Discord, external
-APIs, etc);
-- How to prepare the environment to accomplish a specific task
-that demands business knowledge and populate data in multible tables;
-- Glossary of business terms and actions that are not obvious
-to the general public;
-- Anything that you needed to research inside the project and
-it could help a new developer not to have spent time on that research.
+This project provides infrastructure-as-code templates for deploying a production-ready Talos Linux Kubernetes cluster on AWS using Terraform and OpenTofu.
+
+## Documentation Contents
+
+- **[Project Overview](./project-overview.md)** - Introduction to the template and its purpose
+- **[Architecture](./architecture.md)** - Infrastructure architecture and design
+- **[Deployment](./deployment.md)** - Step-by-step deployment instructions
+- **[Secrets Management](./secrets.md)** - How to manage sensitive configuration
+
+## What is Talos Linux?
+
+Talos Linux is a modern, minimal Linux distribution designed specifically for running Kubernetes. Key features:
+
+- **Immutable**: No SSH, no shell, configuration via API only
+- **Secure**: Minimal attack surface, all management via encrypted API
+- **Kubernetes-Native**: Built exclusively for running Kubernetes workloads
+- **API-Driven**: All operations performed via declarative configuration
+
+## Quick Start
+
+1. Generate a new project from this template using Copier
+2. Configure AWS credentials
+3. Deploy infrastructure: `cd terraform/sandbox && tofu apply`
+4. Bootstrap Talos cluster: `cd bootstrap-cluster/sandbox && task talos:bootstrap`
+5. Access your cluster: `kubectl --kubeconfig kubeconfig get nodes`
+
+For detailed instructions, see the [Deployment Documentation](./deployment.md).

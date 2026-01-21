@@ -1,10 +1,10 @@
 # :house: Architecture
 
-This document outlines the architecture of the application, with diagrams to visualize the different components and their relationships.
+This document outlines the infrastructure architecture for deploying Talos Linux Kubernetes clusters on AWS.
 
 ## System Overview
 
-The template provides a full-stack application with the following components:
+The template provides infrastructure for deploying a Talos Linux Kubernetes cluster with the following components:
 
 ```mermaid
 %%{
@@ -21,104 +21,48 @@ The template provides a full-stack application with the following components:
   }
 }%%
 flowchart TD
-    %% External entities
-    User([User])
-    
-    %% Top-level system components
-    subgraph SystemOverview["SCAF System Overview"]
-        %% Infrastructure layer
+    subgraph SystemOverview["Talos Cluster Architecture"]
         subgraph InfraLayer["Infrastructure Layer"]
-            TF[Terraform] --> AWS[AWS Resources]
-            K8S[Kubernetes] --> CLUSTER[K8s Cluster]
+            TF[Terraform/OpenTofu] --> AWS[AWS Resources]
+            AWS --> VPC[VPC Network]
+            AWS --> EC2[EC2 Instances]
+            AWS --> DNS[Route53 DNS]
         end
-        
-        %% Application layer
-        subgraph AppLayer["Application Layer"]
-            FE[Next.js Frontend] --> |GraphQL| BE[Django Backend]
-            BE --> |Queries/Mutations| DB[(PostgreSQL)]
-            BE --> |Async Tasks| CELERY[Celery Workers]
-            CELERY --> REDIS[Redis]
-            CELERY --> |Email| MAIL[Email Service]
+
+        subgraph OSLayer["Operating System Layer"]
+            EC2 --> TALOS[Talos Linux v1.12.1]
+            TALOS --> API[Talos API]
         end
-        
-        %% Connections between layers
-        CLUSTER --> APP[Application Stack]
-        AWS --> APP
+
+        subgraph K8sLayer["Kubernetes Layer"]
+            API --> K8S[Kubernetes Cluster]
+            K8S --> CP[Control Plane]
+            CP --> APISERVER[API Server]
+            CP --> ETCD[etcd]
+            CP --> SCHEDULER[Scheduler]
+        end
     end
-    
-    %% External connections
-    User -->|interacts with| FE
 
     %% Style definitions - Gruvbox Dark theme
-    classDef external fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
     classDef infrastructure fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
-    classDef application fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    classDef database fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold,shape:cylinder
-    classDef queue fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
+    classDef os fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef kubernetes fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
 
     %% Apply styles
-    class User external
-    class TF,K8S,AWS,CLUSTER,APP infrastructure
-    class FE,BE,CELERY,MAIL application
-    class DB database
-    class REDIS queue
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
+    class TF,AWS,VPC,EC2,DNS infrastructure
+    class TALOS,API os
+    class K8S,CP,APISERVER,ETCD,SCHEDULER kubernetes
+
+    %% Explicit styling for subgraphs
     style SystemOverview fill:#282828,color:#fabd2f,font-weight:bold
     style InfraLayer fill:#282828,color:#fabd2f,font-weight:bold
-    style AppLayer fill:#282828,color:#fabd2f,font-weight:bold
+    style OSLayer fill:#282828,color:#fabd2f,font-weight:bold
+    style K8sLayer fill:#282828,color:#fabd2f,font-weight:bold
 ```
 
-## Application Architecture
+## AWS Infrastructure (Terraform)
 
-### Frontend (Next.js)
-
-The frontend is built with Next.js and TypeScript, using Apollo Client for GraphQL communication with the backend.
-
-```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#282828',
-      'primaryTextColor': '#ebdbb2',
-      'primaryBorderColor': '#7c6f64',
-      'lineColor': '#7c6f64',
-      'secondaryColor': '#3c3836',
-      'tertiaryColor': '#504945'
-    }
-  }
-}%%
-flowchart LR
-    %% Node styling
-    
-    subgraph FrontendArch["Frontend Architecture"]
-        subgraph NextComponents["Next.js Components"]
-            PAGES[Pages] --> COMPS[Components]
-            PAGES --> HOOKS[Hooks/Utils]
-            APOLLO[Apollo Client] --> GQL[GraphQL Queries/Mutations] 
-            PAGES --> APOLLO
-        end
-    end
-    
-    APOLLO --> |HTTP/GraphQL| API[Backend API]
-    
-    %% Style definitions - Gruvbox Dark theme
-    classDef frontend fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
-    classDef api fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    
-    %% Apply styles
-    class PAGES,COMPS,HOOKS,APOLLO,GQL frontend
-    class API api
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
-    style FrontendArch fill:#282828,color:#fabd2f,font-weight:bold
-    style NextComponents fill:#282828,color:#fabd2f,font-weight:bold
-```
-
-### Backend (Django)
-
-The backend is built with Django, using Django GraphQL and Celery for async task processing.
+The cloud infrastructure is managed with Terraform/OpenTofu, provisioning the following AWS resources:
 
 ```mermaid
 %%{
@@ -135,153 +79,60 @@ The backend is built with Django, using Django GraphQL and Celery for async task
   }
 }%%
 flowchart TB
-    %% External entities
-    User([User])
-    
-    subgraph BackendArch["Backend Architecture"]
-        subgraph DjangoComponents["Django Components"]
-            URLS[URL Configuration] --> VIEWS[Views/GraphQL]
-            VIEWS --> MODELS[Models]
-            MODELS --> DB[(PostgreSQL)]
-            VIEWS --> |Async Tasks| TASKS[Celery Tasks]
-            TASKS --> REDIS[Redis]
-        end
-    end
-    
-    User --> |HTTP Request| VIEWS
-    
-    %% Style definitions - Gruvbox Dark theme
-    classDef external fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
-    classDef backend fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    classDef database fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold,shape:cylinder
-    classDef queue fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
-    
-    %% Apply styles
-    class User external
-    class URLS,VIEWS,MODELS,TASKS backend
-    class DB database
-    class REDIS queue
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
-    style BackendArch fill:#282828,color:#fabd2f,font-weight:bold
-    style DjangoComponents fill:#282828,color:#fabd2f,font-weight:bold
-```
-
-## Infrastructure Architecture
-
-### Kubernetes Deployment
-
-The application is deployed on Kubernetes, with separate environments for development, staging, and production.
-
-```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#282828',
-      'primaryTextColor': '#ebdbb2',
-      'primaryBorderColor': '#7c6f64',
-      'lineColor': '#7c6f64',
-      'secondaryColor': '#3c3836',
-      'tertiaryColor': '#504945'
-    }
-  }
-}%%
-flowchart TB
-    %% External entities
-    User([User])
-    
-    subgraph K8sArch["Kubernetes Architecture"]
-        INGRESS[Ingress Controller] --> FE_SVC[Frontend Service]
-        INGRESS --> BE_SVC[Backend Service]
-        
-        FE_SVC --> FE_POD[Frontend Pods]
-        BE_SVC --> BE_POD[Backend Pods]
-        
-        CELERY_SVC[Celery Service] --> CELERY_POD[Celery Pods]
-        
-        DB_SVC[Database Service] --> DB_POD[Database Pods]
-        REDIS_SVC[Redis Service] --> REDIS_POD[Redis Pods]
-    end
-    
-    User --> |HTTPS| INGRESS
-    
-    %% Style definitions - Gruvbox Dark theme
-    classDef external fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
-    classDef ingress fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
-    classDef service fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    classDef pod fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
-    
-    %% Apply styles
-    class User external
-    class INGRESS ingress
-    class FE_SVC,BE_SVC,CELERY_SVC,DB_SVC,REDIS_SVC service
-    class FE_POD,BE_POD,CELERY_POD,DB_POD,REDIS_POD pod
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
-    style K8sArch fill:#282828,color:#fabd2f,font-weight:bold
-```
-
-### AWS Infrastructure (Terraform)
-
-The cloud infrastructure is managed with Terraform, provisioning AWS resources.
-
-```mermaid
-%%{
-  init: {
-    'theme': 'base',
-    'themeVariables': {
-      'primaryColor': '#282828',
-      'primaryTextColor': '#ebdbb2',
-      'primaryBorderColor': '#7c6f64',
-      'lineColor': '#7c6f64',
-      'secondaryColor': '#3c3836',
-      'tertiaryColor': '#504945'
-    }
-  }
-}%%
-flowchart TB
-    %% External entities
     INTERNET([Internet])
-    
+
     subgraph AWSArch["AWS Infrastructure"]
-        R53[Route53] --> CF[CloudFront]
-        CF --> ALB[Application Load Balancer]
-        
-        ALB --> EKS[EKS Cluster]
-        
-        EKS --> EC2[EC2 Instances]
-        
-        ECR[ECR Repositories] --> EKS
-        
-        RDS[RDS PostgreSQL] --- EKS
-        
-        S3[S3 Buckets] --- CF
+        R53[Route53 DNS] --> ELB[Elastic Load Balancer]
+
+        ELB --> VPC[VPC Network]
+
+        VPC --> SG[Security Groups]
+        VPC --> SUBNET[Public Subnets]
+
+        SUBNET --> EC2_1[EC2 Control Plane 1<br/>Talos Linux]
+        SUBNET --> EC2_2[EC2 Control Plane 2<br/>Talos Linux]
+        SUBNET --> EC2_3[EC2 Control Plane 3<br/>Talos Linux]
+
+        SG --> EC2_1
+        SG --> EC2_2
+        SG --> EC2_3
+
+        IAM[IAM Roles] --> EC2_1
+        IAM --> EC2_2
+        IAM --> EC2_3
     end
-    
-    INTERNET --> R53
-    
+
+    INTERNET --> |k8s.domain.com:6443| R53
+
     %% Style definitions - Gruvbox Dark theme
     classDef external fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
     classDef network fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
     classDef compute fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    classDef storage fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
-    classDef database fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold,shape:cylinder
-    
+    classDef security fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
+
     %% Apply styles
     class INTERNET external
-    class R53,CF,ALB network
-    class EKS,EC2 compute
-    class ECR,S3 storage
-    class RDS database
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
+    class R53,ELB,VPC,SUBNET network
+    class EC2_1,EC2_2,EC2_3 compute
+    class SG,IAM security
+
+    %% Explicit styling for subgraph
     style AWSArch fill:#282828,color:#fabd2f,font-weight:bold
 ```
 
-## Data Flow
+### Infrastructure Components
 
-This diagram illustrates how data flows through the system:
+- **VPC**: Isolated network with configurable CIDR blocks
+- **Public Subnets**: Subnets across multiple availability zones for high availability
+- **Security Groups**: Firewall rules for Kubernetes API (6443), Talos API (50000), and inter-node communication
+- **EC2 Instances**: Control plane nodes running Talos Linux AMI
+- **Elastic Load Balancer**: Load balances traffic to control plane nodes
+- **Route53**: DNS records for cluster API endpoint (k8s.domain.com)
+- **IAM Roles**: Permissions for EC2 instances to access AWS services
+
+## Talos Linux Architecture
+
+Talos Linux provides the operating system layer that creates and manages the Kubernetes cluster:
 
 ```mermaid
 %%{
@@ -293,45 +144,68 @@ This diagram illustrates how data flows through the system:
       'primaryBorderColor': '#7c6f64',
       'lineColor': '#7c6f64',
       'secondaryColor': '#3c3836',
-      'tertiaryColor': '#504945',
-      'actorBkg': '#3c3836',
-      'actorTextColor': '#ebdbb2',
-      'actorBorder': '#928374'
+      'tertiaryColor': '#504945'
     }
   }
 }%%
-sequenceDiagram
-    actor User as User
-    participant FE as Frontend (Next.js)
-    participant BE as Backend (Django)
-    participant DB as PostgreSQL
-    participant Worker as Celery Worker
-    
-    User->>FE: Access Application
-    activate FE
-    FE->>BE: GraphQL Query/Mutation
-    activate BE
-    BE->>DB: Database Query
-    activate DB
-    DB-->>BE: Query Results
-    deactivate DB
-    BE-->>FE: GraphQL Response
-    deactivate BE
-    FE-->>User: Display Data
-    deactivate FE
-    
-    alt Async Process
-        BE->>Worker: Queue Task
-        activate Worker
-        Worker->>DB: Process Data
-        activate DB
-        deactivate DB
-        Worker->>BE: Task Result
-        deactivate Worker
+flowchart TB
+    ADMIN([Cluster Administrator])
+
+    subgraph TalosArch["Talos Linux Architecture"]
+        TALOSCTL[talosctl CLI] --> |gRPC/TLS| TALOSAPI[Talos API :50000]
+
+        TALOSAPI --> MACHINED[machined<br/>System Service Manager]
+
+        MACHINED --> K8S_SERVICES[Kubernetes Services]
+        MACHINED --> SYSTEM[System Services]
+
+        K8S_SERVICES --> KUBELET[kubelet]
+        K8S_SERVICES --> API_SERVER[kube-apiserver]
+        K8S_SERVICES --> CONTROLLER[kube-controller-manager]
+        K8S_SERVICES --> SCHEDULER[kube-scheduler]
+        K8S_SERVICES --> ETCD[etcd]
+
+        SYSTEM --> NETWORKD[networkd<br/>Network Management]
+        SYSTEM --> TRUSTD[trustd<br/>Certificate Management]
     end
+
+    ADMIN --> TALOSCTL
+
+    KUBECTL[kubectl] --> |HTTPS:6443| API_SERVER
+
+    %% Style definitions - Gruvbox Dark theme
+    classDef external fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
+    classDef api fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
+    classDef core fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef k8s fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
+    classDef system fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
+
+    %% Apply styles
+    class ADMIN,TALOSCTL,KUBECTL external
+    class TALOSAPI api
+    class MACHINED,K8S_SERVICES,SYSTEM core
+    class KUBELET,API_SERVER,CONTROLLER,SCHEDULER,ETCD k8s
+    class NETWORKD,TRUSTD system
+
+    %% Explicit styling for subgraph
+    style TalosArch fill:#282828,color:#fabd2f,font-weight:bold
 ```
 
-## Development Workflow
+### Talos Components
+
+- **machined**: Core system service that manages all other services
+- **Talos API**: gRPC API for cluster management (port 50000)
+- **kubelet**: Kubernetes node agent
+- **kube-apiserver**: Kubernetes API server (port 6443)
+- **kube-controller-manager**: Kubernetes controller manager
+- **kube-scheduler**: Kubernetes scheduler
+- **etcd**: Distributed key-value store for Kubernetes state
+- **networkd**: Network configuration and management
+- **trustd**: Certificate and PKI management
+
+## Deployment Flow
+
+This diagram shows the deployment process from infrastructure provisioning to running cluster:
 
 ```mermaid
 %%{
@@ -348,30 +222,29 @@ sequenceDiagram
   }
 }%%
 flowchart LR
-    subgraph DevWorkflow["Development Workflow"]
-        CODE[Local Development] --> |Git Push| REPO[Repository]
-        REPO --> |CI/CD Pipeline| CI[CI/CD Tests]
-        CI --> |Deployment| K8S[Kubernetes]
-        K8S --> |ArgoCD| ENV[Environment]
+    subgraph DeployFlow["Deployment Flow"]
+        TERRAFORM[1. Terraform Apply<br/>Provision AWS Resources] --> EC2[2. EC2 Instances Boot<br/>Talos Linux AMI]
+        EC2 --> GENCONFIG[3. Generate Configs<br/>talosctl gen config]
+        GENCONFIG --> APPLYCONFIG[4. Apply Configuration<br/>talosctl apply-config]
+        APPLYCONFIG --> BOOTSTRAP[5. Bootstrap Cluster<br/>talosctl bootstrap]
+        BOOTSTRAP --> KUBECONFIG[6. Generate kubeconfig<br/>talosctl kubeconfig]
+        KUBECONFIG --> RUNNING[7. Cluster Running<br/>kubectl get nodes]
     end
-    
+
     %% Style definitions - Gruvbox Dark theme
-    classDef dev fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
-    classDef repo fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
-    classDef ci fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
-    classDef deploy fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
-    
+    classDef terraform fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
+    classDef boot fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef config fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
+    classDef running fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
+
     %% Apply styles
-    class CODE dev
-    class REPO repo
-    class CI ci
-    class K8S,ENV deploy
-    
-    %% Link styling
-    linkStyle default stroke:#7c6f64,stroke-width:2px,stroke-dasharray: 5 5
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
-    style DevWorkflow fill:#282828,color:#fabd2f,font-weight:bold
+    class TERRAFORM terraform
+    class EC2 boot
+    class GENCONFIG,APPLYCONFIG,BOOTSTRAP,KUBECONFIG config
+    class RUNNING running
+
+    %% Explicit styling for subgraph
+    style DeployFlow fill:#282828,color:#fabd2f,font-weight:bold
 ```
 
 ## Environment Architecture
@@ -394,33 +267,54 @@ The project supports multiple environments with different configurations:
 }%%
 flowchart TB
     subgraph EnvArch["Environment Architecture"]
-        BASE[Base Configuration] --> DEV[Development]
-        BASE --> SANDBOX[Sandbox]
-        BASE --> STAGING[Staging]
-        BASE --> PROD[Production]
-        
-        DEV --> |Local Testing| DEV_ENV[Local Environment]
-        SANDBOX --> |Testing| SANDBOX_ENV[Sandbox Environment]
-        STAGING --> |Pre-Production| STAGING_ENV[Staging Environment]
-        PROD --> |Production| PROD_ENV[Production Environment]
+        TERRAFORM[Terraform Base Module]
+
+        TERRAFORM --> SANDBOX[Sandbox Environment<br/>terraform/sandbox/]
+        TERRAFORM --> STAGING[Staging Environment<br/>terraform/staging/]
+        TERRAFORM --> PROD[Production Environment<br/>terraform/production/]
+
+        SANDBOX --> SANDBOX_CLUSTER[Talos Cluster<br/>sandbox.domain.com]
+        STAGING --> STAGING_CLUSTER[Talos Cluster<br/>staging.domain.com]
+        PROD --> PROD_CLUSTER[Talos Cluster<br/>domain.com]
     end
-    
+
     %% Style definitions - Gruvbox Dark theme
     classDef base fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
-    classDef dev fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef sandbox fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#282828,font-weight:bold
     classDef staging fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
     classDef prod fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
-    classDef sandbox fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#282828,font-weight:bold
-    classDef env fill:#3c3836,stroke:#928374,stroke-width:1px,color:#ebdbb2,font-weight:bold
-    
+    classDef cluster fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+
     %% Apply styles
-    class BASE base
-    class DEV dev
+    class TERRAFORM base
     class SANDBOX sandbox
     class STAGING staging
     class PROD prod
-    class DEV_ENV,SANDBOX_ENV,STAGING_ENV,PROD_ENV env
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
+    class SANDBOX_CLUSTER,STAGING_CLUSTER,PROD_CLUSTER cluster
+
+    %% Explicit styling for subgraph
     style EnvArch fill:#282828,color:#fabd2f,font-weight:bold
 ```
+
+## Security Architecture
+
+Talos Linux provides multiple layers of security:
+
+1. **No SSH Access**: Impossible to SSH into nodes, eliminating a major attack vector
+2. **Immutable File System**: Root filesystem is read-only and cannot be modified
+3. **API Authentication**: All management operations require mutual TLS authentication
+4. **Minimal Attack Surface**: Only runs Kubernetes components, nothing else
+5. **Encrypted Communication**: All API communication is encrypted
+6. **Certificate Management**: Automatic certificate rotation and management
+
+## Network Architecture
+
+Default ports and protocols:
+
+- **6443**: Kubernetes API server (HTTPS)
+- **50000**: Talos API (gRPC/TLS)
+- **50001**: Talos Trustd API (gRPC/TLS)
+- **2379-2380**: etcd client and peer communication
+- **10250**: kubelet API
+
+All inter-node communication is secured with TLS.
