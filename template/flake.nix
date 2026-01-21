@@ -29,7 +29,6 @@
               pip
             ]))
             awscli2
-            argocd
             bashInteractive
             copier
             coreutils

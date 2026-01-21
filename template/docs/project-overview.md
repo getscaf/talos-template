@@ -1,16 +1,16 @@
 # :telescope: Project Overview
 
-This project template provides a full-stack application scaffold with integrated deployment tooling. It's designed to quickly bootstrap new projects with a standardized architecture and best practices.
+This project template provides infrastructure-as-code for deploying production-ready Talos Linux Kubernetes clusters on AWS. It's designed to quickly bootstrap new Kubernetes clusters with a standardized, secure, and immutable infrastructure.
 
 ## Purpose
 
 The purpose of this template is to:
 
-1. Provide a consistent starting point for new projects
-2. Implement best practices for development, testing, and deployment
-3. Reduce setup time for new projects
+1. Provide a consistent starting point for new Kubernetes clusters
+2. Implement security best practices with immutable infrastructure (Talos Linux)
+3. Reduce cluster setup time from days to hours
 4. Ensure infrastructure is defined as code from the beginning
-5. Enable rapid iteration and deployment to various environments
+5. Enable deployment to multiple environments (sandbox, staging, production)
 
 ## Core Technologies
 
@@ -30,46 +30,43 @@ The purpose of this template is to:
 }%%
 flowchart LR
     subgraph Temp["Core Technologies"]
-        Frontend["Frontend
-        Next.js
-        TypeScript
-        Apollo Client
-        GraphQL
-        TailwindCSS
-        Vitest"]
-        
-        Backend["Backend
-        Django
-        GraphQL
-        Celery
-        Redis
-        PostgreSQL"]
-        
-        Infrastructure["Infrastructure
-        Kubernetes
-        Docker
-        ArgoCD
-        Terraform"]
-        
-        DevOps["DevOps
-        CI/CD
-        GitOps
-        Secrets Management"]
+        OS["Operating System
+        Talos Linux v1.12.1
+        Immutable
+        API-Driven
+        Kubernetes-Native"]
+
+        Infra["Infrastructure
+        Terraform/OpenTofu
+        AWS EC2
+        VPC Networking
+        Route53 DNS"]
+
+        K8s["Kubernetes
+        Control Plane
+        etcd
+        API Server
+        Scheduler"]
+
+        Tools["Tooling
+        talosctl
+        kubectl
+        Task Automation"]
     end
-    
+
     %% Style definitions - Gruvbox Dark theme
-    classDef frontend fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
-    classDef backend fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef os fill:#d79921,stroke:#b57614,stroke-width:2px,color:#282828,font-weight:bold
     classDef infra fill:#458588,stroke:#076678,stroke-width:2px,color:#282828,font-weight:bold
-    classDef devops fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
-    
+    classDef k8s fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#282828,font-weight:bold
+    classDef tools fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#282828,font-weight:bold
+
     %% Apply styles
-    class Frontend frontend
-    class Backend backend
-    class Infrastructure infra
-    class DevOps devops
-    
-    %% Explicit styling for subgraph titles - works in both light and dark modes
+    class OS os
+    class Infra infra
+    class K8s k8s
+    class Tools tools
+
+    %% Explicit styling for subgraph titles
     style Temp fill:#282828,color:#fabd2f,font-weight:bold
 ```
 
@@ -77,31 +74,56 @@ flowchart LR
 
 The template follows these design principles:
 
-1. **Infrastructure as Code**: All infrastructure is defined in Terraform and Kubernetes manifests
-2. **GitOps**: Deployment is managed through Git using ArgoCD
-3. **Environment Parity**: Development, sandbox, staging, and production environments use the same configuration base
-4. **Containerization**: All application components run in containers
-5. **Microservices**: The application is structured as separate services (frontend, backend, workers)
-6. **API-First**: Backend exposes GraphQL API consumed by the frontend
-7. **Async Processing**: Long-running tasks are handled asynchronously with Celery
+1. **Infrastructure as Code**: All infrastructure defined in Terraform
+2. **Immutable Infrastructure**: Talos OS cannot be modified at runtime
+3. **Security First**: No SSH access, minimal attack surface, API-only management
+4. **Environment Parity**: Sandbox, staging, and production use identical base configuration
+5. **Declarative Configuration**: All cluster configuration managed via talosconfig files
+6. **API-Driven Operations**: All management operations via `talosctl` CLI
 
 ## How to Use This Template
 
-1. Create a new project using Copier with this template
-2. Fill in the required variables during setup
-3. Initialize the Git repository
-4. Start development with the included tooling
+1. Generate a new project using Copier with this template
+2. Fill in the required variables (project name, AWS region, domain, etc.)
+3. Configure AWS credentials
+4. Deploy infrastructure with Terraform
+5. Bootstrap Talos cluster with provided scripts
+6. Deploy your applications to the cluster
 
-For more details on the architecture, see the [Architecture Documentation](./architecture.md).
+For detailed instructions, see the [Deployment Documentation](./deployment.md).
 
 ## Key Features
 
-- Next.js frontend with TypeScript and GraphQL integration
-- Django backend with GraphQL API
-- Celery for background task processing
-- Kubernetes manifests for deployment
-- Terraform for infrastructure provisioning
-- CI/CD pipeline configuration
-- Comprehensive documentation
-- Development environment setup
-- Testing infrastructure
+- **Talos Linux v1.12.1** - Latest stable Talos OS with custom factory image
+- **AWS Infrastructure** - VPC, EC2 instances, security groups, load balancers
+- **Multi-Environment Support** - Sandbox, staging, and production configurations
+- **Terraform/OpenTofu** - Infrastructure provisioning and state management
+- **Custom Extensions** - ECR credential provider for AWS container registry
+- **High Availability** - Configurable number of control plane nodes
+- **Secure by Default** - API-only management, no SSH access
+- **DNS Integration** - Automatic Route53 configuration
+
+## What You Get
+
+After deployment, you'll have:
+
+- A fully functional Kubernetes cluster running on Talos Linux
+- EC2 instances configured as Kubernetes control plane nodes
+- VPC with proper networking and security groups
+- DNS records for cluster API access
+- `talosconfig` for cluster management
+- `kubeconfig` for kubectl access
+- Ready to deploy your workloads
+
+## What This Template Does NOT Include
+
+This is a **bare cluster template**. It does not include:
+
+- Application deployments
+- Database services
+- Message queues
+- Monitoring/logging solutions
+- CI/CD pipelines
+- Application load balancing
+
+You can deploy any of these on top of the cluster once it's running.

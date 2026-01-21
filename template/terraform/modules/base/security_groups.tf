@@ -33,7 +33,6 @@ module "cluster_sg" {
       cidr_blocks = var.admin_allowed_ips
       description = "Kubernetes API Access"
     },
-{% if copier__operating_system == "talos" %}
     {
       from_port   = 50000
       to_port     = 50000
@@ -41,15 +40,6 @@ module "cluster_sg" {
       cidr_blocks = var.admin_allowed_ips
       description = "Talos API Access"
     },
-{%- elif copier__operating_system == "k3s" %}
-    {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = var.admin_allowed_ips
-      description = "Talos API Access"
-    },
-{%- endif %}
   ]
 
   egress_with_cidr_blocks = [

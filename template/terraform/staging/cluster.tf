@@ -1,13 +1,10 @@
 module "cluster" {
-  source                 = "../modules/base"
-  environment            = "staging"
-  cluster_name           = "{{ copier__project_dash }}-staging"
-  domain_name            = "staging.{{ copier__domain_name }}"
-  api_domain_name        = "api.staging.{{ copier__domain_name }}"
-  cluster_domain_name    = "k8s.staging.{{ copier__domain_name }}"
-  argocd_domain_name     = "argocd.staging.{{ copier__domain_name }}"
-  prometheus_domain_name = "prometheus.staging.{{ copier__domain_name }}"
-  existing_hosted_zone   = module.global_variables.existing_hosted_zone
+  source               = "../modules/base"
+  environment          = "staging"
+  cluster_name         = "{{ copier__project_dash }}-staging"
+  domain_name          = "staging.{{ copier__domain_name }}"
+  cluster_domain_name  = "k8s.staging.{{ copier__domain_name }}"
+  existing_hosted_zone = module.global_variables.existing_hosted_zone
   control_plane = {
     # 2 vCPUs, 4 GiB RAM, $0.0376 per Hour
     instance_type = "t3a.medium"

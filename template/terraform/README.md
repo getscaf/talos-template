@@ -48,17 +48,28 @@ Export the `AWS_PROFILE` environment variable:
 ```
 $ export AWS_PROFILE=scaf
 ```
-Then, to deploy to sandbox you can run:
 
+## Deployment
+
+### Bootstrap Terraform State Backend
+
+First, create the S3 bucket and DynamoDB table for Terraform state:
+
+```bash
+cd bootstrap
+tofu init && tofu plan -out=tfplan.out && tofu apply tfplan.out
 ```
-$ task deploy-sandbox
+
+This only needs to be run once for all environments.
+
+### Deploy an Environment
+
+To deploy the sandbox environment:
+
+```bash
+cd ../sandbox
+tofu init && tofu plan -out=tfplan.out && tofu apply tfplan.out
 ```
 
-TODO: replace with automation between the environment creation and the argocd bootstrap:
-
-
-```
-{% if copier__create_nextjs_frontend %}
-6. After the environment is successfully deployed, note the CloudFront distribution ID that was created, and update the `DISTRIBUTION_ID` value in the corresponding kustomization.yaml file (e.g., sandbox/kustomization.yaml or production/kustomization.yaml) to reflect the correct value.
-{% endif %}
+For other environments, replace `sandbox` with `staging` or `production`.
 

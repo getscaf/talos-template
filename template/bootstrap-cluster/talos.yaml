@@ -1,7 +1,4 @@
 version: '3'
-env:
-  TALOSCONFIG: ./{{ '{{.ENV}}' }}/talosconfig
-  KUBECONFIG: ./{{ '{{.ENV}}' }}/kubeconfig
 tasks:
   bootstrap:
     desc: |
@@ -19,11 +16,16 @@ tasks:
       - sleep 60
       - task: generate_kubeconfig
       - task: store_kubeconfig
-      - task: upgrade_talos
+      # - task: upgrade_talos
   generate_configs:
     desc: |
       Generate the initial Talos configuration files for the control plane
       and Talos nodes.
+    vars:
+      PUBLIC_IPS:
+        sh: |
+          tofu -chdir={{ '{{.TOFU_DIR}}' }}/{{ '{{.ENV}}' }} \
+            output -raw control_plane_nodes_public_ips
     cmds:
       - |
         talosctl gen config {{ '{{.CLUSTER_NAME}}' }} {{ '{{.CONTROL_PLANE_ENDPOINT}}' }} \
@@ -31,6 +33,7 @@ tasks:
           --output ./{{ '{{.ENV}}' }}/ \
           --config-patch @patches/patch-machine.yaml \
           --config-patch-control-plane @patches/patch-control-plane.yaml \
+          --additional-sans {{ '{{.PUBLIC_IPS}}' }} \
           --with-examples=false \
           --with-docs=false
   set_node_ips:
@@ -45,18 +48,21 @@ tasks:
     requires:
       vars: [ENV]
     cmds:
-      - talosctl --talosconfig $TALOSCONFIG config endpoint {{ '{{.EC2_HOSTS}}' }}
+      - talosctl --talosconfig ./{{ '{{.ENV}}' }}/talosconfig config endpoint {{ '{{.EC2_HOSTS}}' }}
+      - |
+        echo "✅ Endpoints set in talosconfig:"
+        grep -A 3 "endpoints:" ./{{ '{{.ENV}}' }}/talosconfig | head -5
   apply_talos_config:
     desc: |
       Apply the Talos configuration to all nodes in the control plane.
     cmds:
       - |
-        for node in $(yq -r '.contexts[].endpoints[]' $TALOSCONFIG); do \
+        for node in $(yq -r '.contexts[].endpoints[]' ./{{ '{{.ENV}}' }}/talosconfig); do \
           echo "Applying config to $node" && \
           talosctl apply-config \
             --insecure \
             --nodes $node \
-            --talosconfig $TALOSCONFIG \
+            --talosconfig ./{{ '{{.ENV}}' }}/talosconfig \
             --file ./{{ '{{.ENV}}' }}/controlplane.yaml; \
         done
   bootstrap_kubernetes:
@@ -66,10 +72,10 @@ tasks:
       FIRST_NODE:
         sh: |
           tofu -chdir={{ '{{.TOFU_DIR}}' }}/{{ '{{.ENV}}' }} \
-            output -raw control_plane_nodes_private_ips | \
+            output -raw control_plane_nodes_public_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl bootstrap --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }}
+      - talosctl bootstrap --talosconfig ./{{ '{{.ENV}}' }}/talosconfig --nodes {{ '{{.FIRST_NODE}}' }}
   generate_kubeconfig:
     desc: |
       Generate the kubeconfig file to access the Kubernetes cluster using
@@ -78,19 +84,24 @@ tasks:
       FIRST_NODE:
         sh: |
           tofu -chdir={{ '{{.TOFU_DIR}}' }}/{{ '{{.ENV}}' }} \
-            output -raw control_plane_nodes_private_ips | \
+            output -raw control_plane_nodes_public_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl kubeconfig $KUBECONFIG --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }} --force
+      - talosctl kubeconfig ./{{ '{{.ENV}}' }}/kubeconfig --talosconfig ./{{ '{{.ENV}}' }}/talosconfig --nodes {{ '{{.FIRST_NODE}}' }} --force
   upgrade_talos:
     desc: |
       Upgrade Talos on all control plane nodes to a specified version.
+    vars:
+      CONTROL_PLANE_PUBLIC_IPS:
+        sh: |
+          tofu -chdir={{ '{{.TOFU_DIR}}' }}/{{ '{{.ENV}}' }} \
+            output -raw control_plane_nodes_public_ips | tr ',' ' '
     cmds:
       #- task: health
       - |
-        for node in $(echo "{{ '{{.CONTROL_PLANE_PRIVATE_IPS}}' }}"); do
+        for node in {{ '{{.CONTROL_PLANE_PUBLIC_IPS}}' }}; do
           echo "Upgrading Talos on $node" && \
-          talosctl upgrade --talosconfig $TALOSCONFIG --nodes $node --image {{ '{{.TALOS_FACTORY_IMAGE}}' }}; \
+          talosctl upgrade --talosconfig ./{{ '{{.ENV}}' }}/talosconfig --nodes $node --image {{ '{{.TALOS_FACTORY_IMAGE}}' }}; \
         done
   store_talosconfig:
     desc: |
@@ -101,7 +112,7 @@ tasks:
       - |
         aws secretsmanager create-secret \
           --name "{{ '{{.ENV}}' }}_talosconfig_yaml" \
-          --secret-string "$(base64 -w0 $TALOSCONFIG)"
+          --secret-string "$(base64 -w0 ./{{ '{{.ENV}}' }}/talosconfig)"
   store_controlplane_config:
     desc: |
       Store the Talos control plane configuration file in AWS Secrets
@@ -122,7 +133,7 @@ tasks:
       - |
         aws secretsmanager create-secret \
           --name "{{ '{{.ENV}}' }}_kubeconfig" \
-          --secret-string "$(base64 -w0 $KUBECONFIG)"
+          --secret-string "$(base64 -w0 ./{{ '{{.ENV}}' }}/kubeconfig)"
   health:
     desc: |
       Check the health of the Talos cluster.
@@ -130,33 +141,31 @@ tasks:
       FIRST_NODE:
         sh: |
           tofu -chdir={{ '{{.TOFU_DIR}}' }}/{{ '{{.ENV}}' }} \
-            output -raw control_plane_nodes_private_ips | \
+            output -raw control_plane_nodes_public_ips | \
             cut -d',' -f1
     cmds:
-      - talosctl health --talosconfig $TALOSCONFIG --nodes {{ '{{.FIRST_NODE}}' }}
+      - talosctl health --talosconfig ./{{ '{{.ENV}}' }}/talosconfig --nodes {{ '{{.FIRST_NODE}}' }}
   services:
     desc: |
       Check service status on all notes.
     cmds:
       - |
-        for node in $(yq -r '.contexts[].endpoints[]' $TALOSCONFIG); do
-          talosctl service --talosconfig $TALOSCONFIG --nodes $node;
+        for node in $(yq -r '.contexts[].endpoints[]' ./{{ '{{.ENV}}' }}/talosconfig); do
+          talosctl service --talosconfig ./{{ '{{.ENV}}' }}/talosconfig --nodes $node;
         done
   delete_all_secrets:
     desc: |
       Delete all related secrets from AWS Secrets Manager.
+      Restores secrets scheduled for deletion before deleting them.
     requires:
       vars: [ENV]
     cmds:
       - |
-        aws secretsmanager delete-secret \
-          --secret-id "{{ '{{.ENV}}' }}_kubeconfig" --force-delete-without-recovery
-      - |
-        aws secretsmanager delete-secret \
-          --secret-id "{{ '{{.ENV}}' }}_talosconfig_yaml" --force-delete-without-recovery
-      - |
-        aws secretsmanager delete-secret \
-          --secret-id "{{ '{{.ENV}}' }}_talos_controlplane_yaml" --force-delete-without-recovery
+        for secret in "{{ '{{.ENV}}' }}_kubeconfig" "{{ '{{.ENV}}' }}_talosconfig_yaml" "{{ '{{.ENV}}' }}_talos_controlplane_yaml"; do
+          echo "Deleting secret: $secret"
+          aws secretsmanager restore-secret --secret-id "$secret" 2>/dev/null || true
+          aws secretsmanager delete-secret --secret-id "$secret" --force-delete-without-recovery 2>/dev/null || true
+        done
   reset_config:
     desc: |
       Remove all config files and delete secrets in AWS Secrets Manager

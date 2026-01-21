@@ -50,11 +50,11 @@ tasks:
           echo -e "{{.RED}}Error: AWS_PROFILE environment variable must be set{{.END}}"
           exit 1
         fi
-        
+
         PROFILE_MSG="using profile '$AWS_PROFILE'"
         echo -e "{{.BLUE}}Checking AWS credentials $PROFILE_MSG...{{.END}}"
-        
-        # Check SSO cache first (faster than API call), because sts get-caller-identity 
+
+        # Check SSO cache first (faster than API call), because sts get-caller-identity
         #  can be slow and will return quicker about expirations, while sts get-caller-identity
         #  does return valid credentials that are actually expired
         NEED_LOGIN=false
@@ -62,7 +62,7 @@ tasks:
         if [ -n "$SSO_START_URL" ]; then
           SSO_CACHE_KEY=$(echo -n "$SSO_START_URL" | sha1sum | cut -d' ' -f1)
           SSO_CACHE_FILE="$HOME/.aws/sso/cache/${SSO_CACHE_KEY}.json"
-          
+
           if [ -f "$SSO_CACHE_FILE" ]; then
             EXPIRES_AT=$(jq -r '.expiresAt // empty' "$SSO_CACHE_FILE" 2>/dev/null)
             if [ -n "$EXPIRES_AT" ]; then
@@ -76,16 +76,16 @@ tasks:
             NEED_LOGIN=true
           fi
         fi
-        
+
         if [ "$NEED_LOGIN" = "false" ] && ! aws sts get-caller-identity --profile "$AWS_PROFILE" >/dev/null 2>&1; then
           NEED_LOGIN=true
         fi
-        
+
         if [ "$NEED_LOGIN" = "true" ]; then
           echo -e "{{.YELLOW}}AWS login required $PROFILE_MSG...{{.END}}"
           aws sso login --profile "$AWS_PROFILE"
         fi
-        
+
         echo -e "{{.GREEN}}AWS credentials verified and working.{{.END}}"
 
   ask-auto-approve:
@@ -96,7 +96,7 @@ tasks:
       - |
         echo -e "{{.YELLOW}}Would you like to auto-approve all terraform operations? (y/N):{{.END}}" >&2
         read -p "> " auto_approve || true
-        
+
         if [ "$auto_approve" = "y" ] || [ "$auto_approve" = "Y" ] || [ "$auto_approve" = "yes" ]; then
           echo -e "{{.GREEN}}Terraform operations will be auto-approved.{{.END}}" >&2
           echo "1"
@@ -129,27 +129,6 @@ tasks:
 {% raw %}
         vars: {ENV: '{{.ENV}}'}
 
-  delete-ecr-images:
-    desc: Delete all images from ECR repositories for an environment
-    requires:
-      vars: [ENV]
-    prompt: "WARNING: This will permanently delete all container images in the ECR repositories for the '{{.ENV}}' environment.\nAre you sure you want to continue? Type 'yes' to confirm: "
-    cmds:
-      - |
-        set -e
-        REPO_URLS=$(tofu -chdir=./terraform/{{.ENV}} output -json | jq -r 'to_entries[] | select(.key | endswith("_ecr_repo")) | .value.value | select(. != null)')
-        for REPO_URL in $REPO_URLS; do
-          REPO_NAME=$(basename "$REPO_URL")
-          echo "Checking repository: $REPO_NAME"
-          IMAGE_IDS=$(aws ecr list-images --repository-name "$REPO_NAME" --query 'imageIds[*]' --output json)
-          if [ -n "$IMAGE_IDS" ] && [ "$IMAGE_IDS" != "[]" ]; then
-            echo "Deleting images from $REPO_NAME..."
-            aws ecr batch-delete-image --repository-name "$REPO_NAME" --image-ids "$IMAGE_IDS" >/dev/null
-          else
-            echo "No images to delete in $REPO_NAME."
-          fi
-        done
-
   commit-changes:
     desc: Commit any changed files
     cmds:
@@ -169,7 +148,7 @@ tasks:
       - |
         [ "$?" = "0" ] || (echo -e "{{.RED}}Error: Environment must be either 'sandbox', 'staging', or 'production'{{.END}}" && exit 1)
       - echo -e "{{.BLUE}}{{.ACTION}} the {{.ENV}} environment...{{.END}}"
-      
+
   determine-control-plane-ip-address:
     desc: Determine IP addresses for control plane security group configuration
     internal: true
@@ -190,9 +169,9 @@ tasks:
       - echo "2) Enter multiple IP addresses as a comma-separated list"
       - |
         read -p "Enter your choice (1/2): " ip_choice
-        if [ "$ip_choice" = "1" ]; then 
+        if [ "$ip_choice" = "1" ]; then
           PUBLIC_IP_CIDRS="{{.CURRENT_IP}}/32"
-        elif [ "$ip_choice" = "2" ]; then 
+        elif [ "$ip_choice" = "2" ]; then
           echo -e "{{.YELLOW}}Enter comma-separated list of IP addresses (e.g., 1.2.3.4,5.6.7.8):{{.END}}"
           read -p "> " PUBLIC_IP
           PUBLIC_IP_CLEAN=$(echo "$PUBLIC_IP" | sed 's/, /,/g')
@@ -266,8 +245,6 @@ tasks:
     silent: true
     cmds:
       - task: establish-aws-login
-      - task: delete-ecr-images
-        vars: {ENV: sandbox}
       - task: teardown-environment
         vars: {ENV: sandbox}
 

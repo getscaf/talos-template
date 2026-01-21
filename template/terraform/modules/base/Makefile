@@ -21,8 +21,6 @@ kubeconfig:
 
 remove-kube-state:
 	rm -f kubeconfig
-	tofu state rm helm_release.argocd \
-		kubernetes_namespace.monitoring || true
 
 # TODO: add copier__use_talos check for talos targets
 talosconfig:
@@ -55,7 +53,7 @@ upgrade-talos:
 	for ip in $${ip_array[@]} ; do \
 		echo "Upgrading Talos node at IP: $$ip" ; \
 		talosctl upgrade --nodes $$ip \
-		--image factory.talos.dev/installer/10e276a06c1f86b182757a962258ac00655d3425e5957f617bdc82f06894e39b:v1.7.4 ; \
+		--image factory.talos.dev/installer/10e276a06c1f86b182757a962258ac00655d3425e5957f617bdc82f06894e39b:v1.12.1 ; \
 	done
 
 destroy: remove-kube-state remove-talos-state

@@ -33,36 +33,14 @@ variable "domain_name" {
   default = "{{ copier__domain_name }}"
 }
 
-variable "api_domain_name" {
-  type    = string
-  default = "api.{{ copier__domain_name }}"
-}
-
 variable "cluster_domain_name" {
   type    = string
   default = "k8s.{{ copier__domain_name }}"
 }
-{% if copier__create_nextjs_frontend %}
-variable "nextjs_domain_name" {
-  type    = string
-  default = "nextjs.{{ copier__domain_name }}"
-}
-{% endif %}
-
-variable "argocd_domain_name" {
-  type    = string
-  default = "argocd.{{ copier__domain_name }}"
-}
-
-
-variable "prometheus_domain_name" {
-  type    = string
-  default = "prometheus.{{ copier__domain_name }}"
-}
 
 variable "kubernetes_version" {
 
-  description = "Kubernetes version to use for the cluster, if not set the k8s version shipped with the talos sdk or k3s version will be used"
+  description = "Kubernetes version to use for the cluster, if not set the k8s version shipped with the Talos SDK will be used"
   type        = string
   default     = null
 }
@@ -92,36 +70,10 @@ variable "cluster_vpc_cidr" {
   default     = "172.16.0.0/16"
 }
 
-{% if copier__operating_system == "talos" %}
 variable "config_patch_files" {
   description = "Path to talos config path files that applies to all nodes"
   type        = list(string)
   default     = []
-}
-{%- endif %}
-
-variable "repo_name" {
-  type    = string
-  default = "{{ copier__repo_name }}"
-}
-
-variable "repo_url" {
-  type    = string
-  default = "{{ copier__repo_url }}"
-}
-
-{% if copier__create_nextjs_frontend %}
-variable "frontend_ecr_repo" {
-  description = "The Frontend ECR repository name"
-  type        = string
-  default     = "{{ copier__project_dash }}-sandbox-frontend"
-}
-{% endif %}
-
-variable "backend_ecr_repo" {
-  description = "The backend ECR repository name"
-  type        = string
-  default     = "{{ copier__project_dash }}-sandbox-backend"
 }
 
 variable "admin_allowed_ips" {

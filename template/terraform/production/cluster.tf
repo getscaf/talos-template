@@ -1,13 +1,10 @@
 module "cluster" {
-  source                 = "../modules/base"
-  environment            = "prod"
-  cluster_name           = "{{ copier__project_dash }}-prod"
-  domain_name            = "prod.{{ copier__domain_name }}"
-  api_domain_name        = "api.prod.{{ copier__domain_name }}"
-  cluster_domain_name    = "k8s.prod.{{ copier__domain_name }}"
-  argocd_domain_name     = "argocd.prod.{{ copier__domain_name }}"
-  prometheus_domain_name = "prometheus.prod.{{ copier__domain_name }}"
-  existing_hosted_zone   = module.global_variables.existing_hosted_zone
+  source               = "../modules/base"
+  environment          = "prod"
+  cluster_name         = "{{ copier__project_dash }}-prod"
+  domain_name          = "prod.{{ copier__domain_name }}"
+  cluster_domain_name  = "k8s.prod.{{ copier__domain_name }}"
+  existing_hosted_zone = module.global_variables.existing_hosted_zone
   control_plane = {
     # 2 vCPUs, 4 GiB RAM, $0.0376 per Hour
     instance_type = "t3a.medium"

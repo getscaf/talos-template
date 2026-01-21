@@ -132,33 +132,3 @@ copier__aws_account_id:
       "AWS account ID cannot be empty."
     {% endif %}
 
-copier__operating_system:
-  type: str
-  default: "talos"
-  choices:
-    talos: "talos"
-  help: "Deploy Kubernetes on Talos Linux?"
-
-copier__repo_url:
-  type: str
-  default: "git@github.com:organization_name/{{ copier__project_slug }}.git"
-  help: "The URL of the repository."
-  validator: >-
-    {% if not copier__repo_url.startswith("git@") or not ":" in copier__repo_url or not "/" in copier__repo_url.split(":")[1] or not ".git" in copier__repo_url %}
-      Value must follow the format git@provider:orgname/repo.git
-    {% endif %}
-
-copier__source_control_provider:
-  type: str
-  when: false
-  default: "{{ copier__repo_url.split('@')[1].split(':')[0] }}"
-
-copier__source_control_organization_slug:
-  type: str
-  when: false
-  default: "{{ copier__repo_url.split(':')[1].split('/')[0] }}"
-
-copier__repo_name:
-  type: str
-  when: false
-  default: "{{ copier__repo_url.split(':')[1].split('/')[1].replace('.git', '') }}"
